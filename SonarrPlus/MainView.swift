@@ -11,6 +11,11 @@ struct MainView: View {
                         .tabItem {
                             Label("Discover", systemImage: "lightbulb")
                         }
+                    
+                    StatsDashboardView()
+                        .tabItem {
+                            Label("Stats", systemImage: "chart.bar")
+                        }
 
                     LibraryView()
                         .tabItem {

@@ -55,6 +55,7 @@
 				ShowDetailView.swift,
 				SonarrPlusApp.swift,
 				SonarrPlusViewModel.swift,
+				StatsDashboardView.swift,
 			);
 			target = 46F357072D37F1B400AD69F1 /* SonarrPlus */;
 		};

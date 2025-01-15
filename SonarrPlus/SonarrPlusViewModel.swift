@@ -8,10 +8,43 @@
 import Foundation
 import Combine
 
+struct SonarrStats: Decodable {
+    let totalShows: Int?
+    let totalEpisodes: Int?
+    let diskSpaceUsed: Double?
+    let diskSpaceFree: Double?
+}
+
+struct Series: Decodable {
+    let id: Int
+    let title: String
+}
+
+struct DiskSpace: Decodable {
+    let path: String
+    let label: String
+    let freeSpace: Double
+    let totalSpace: Double
+
+    var usedSpace: Double {
+        totalSpace - freeSpace
+    }
+}
+
+struct History: Decodable {
+    let records: [HistoryRecord]
+}
+
+struct HistoryRecord: Decodable {
+    let eventType: String
+}
+
+
 class SonarrPlusViewModel: ObservableObject {
     @Published var isAuthenticated = false
     @Published var rootFolderPath: String? // To store the selected root folder path
-
+    @Published var stats: SonarrStats?
+    
     static let shared = SonarrPlusViewModel()
 
     @Published var shows: [Show] = [] {
@@ -420,6 +453,54 @@ class SonarrPlusViewModel: ObservableObject {
                 completion(nil)
             }
         }.resume()
+    }
+    
+    func fetchStats() async {
+        do {
+            let totalShows = try await fetchTotalShows()
+            let (diskSpaceUsed, diskSpaceFree) = try await fetchDiskSpace()
+
+            DispatchQueue.main.async {
+                self.stats = SonarrStats(
+                    totalShows: totalShows,
+                    totalEpisodes: 0, // Optional to calculate from another endpoint
+                    diskSpaceUsed: diskSpaceUsed,
+                    diskSpaceFree: diskSpaceFree
+                )
+            }
+        } catch {
+            print("Error fetching stats: \(error)")
+        }
+    }
+
+    private func fetchTotalShows() async throws -> Int {
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return 0 }
+        guard let url = URL(string: "\(serverURL)/api/v3/series") else { return 0 }
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let series = try JSONDecoder().decode([Series].self, from: data)
+        return series.count
+    }
+
+    private func fetchDiskSpace() async throws -> (Double, Double) {
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return (0, 0) }
+        guard let url = URL(string: "\(serverURL)/api/v3/diskspace") else { return (0, 0) }
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        print("DiskSpace Response: \(String(data: data, encoding: .utf8) ?? "No data")")
+
+        let disks = try JSONDecoder().decode([DiskSpace].self, from: data)
+        
+        // Aggregate free and used space across all disks
+        let totalUsedSpace = disks.reduce(0) { $0 + $1.usedSpace }
+        let totalFreeSpace = disks.reduce(0) { $0 + $1.freeSpace }
+        
+        // Convert bytes to GB
+        return (totalUsedSpace / 1_073_741_824, totalFreeSpace / 1_073_741_824)
     }
 
     private func getTodayISODate() -> String {
