@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @AppStorage("isDarkMode") private var isDarkMode = false
+
     var body: some View {
         NavigationView {
             VStack {
@@ -23,6 +25,15 @@ struct SettingsView: View {
                     }
                 }
                 .listStyle(GroupedListStyle())
+                
+                Form {
+                    Section(header: Text("Appearance")) {
+                        Toggle(isOn: $isDarkMode) {
+                            Text("Dark Mode")
+                        }
+                    }
+                }
+
                 
                 Spacer() // Push the footer to the bottom
                 
