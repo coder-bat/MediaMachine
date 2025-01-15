@@ -9,11 +9,13 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("isDarkMode") private var isDarkMode = false
+    @State private var isFeedbackPresented = false
 
     var body: some View {
         NavigationView {
-            VStack {
-                List {
+            Form {
+                // App Settings Section
+                Section(header: Text("App Settings")) {
                     Section(header: Text("General")) {
                         Text("App Version: 1.0.0") // Placeholder for future settings
                     }
@@ -24,37 +26,49 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .listStyle(GroupedListStyle())
-                
-                Form {
-                    Section(header: Text("Appearance")) {
-                        Toggle(isOn: $isDarkMode) {
-                            Text("Dark Mode")
-                        }
+
+                // Appearance Section
+                Section(header: Text("Appearance")) {
+                    Toggle(isOn: $isDarkMode) {
+                        Text("Dark Mode")
                     }
                 }
 
-                
-                Spacer() // Push the footer to the bottom
-                
-                // Footer Message
-                VStack {
-                    Text("Made with ❤️ by coder_bat")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                    
+                // Support Section
+                Section(header: Text("Support")) {
                     Button(action: {
-                        if let url = URL(string: "https://lovepeaceand.dev") {
-                            UIApplication.shared.open(url)
-                        }
+                        isFeedbackPresented = true
                     }) {
-                        Text("lovepeaceand.dev")
-                            .font(.footnote)
-                            .underline()
-                            .foregroundColor(.blue)
+                        HStack {
+                            SwiftUI.Image(systemName: "envelope")
+                            Text("Send Feedback")
+                        }
+                    }
+                    .sheet(isPresented: $isFeedbackPresented) {
+                        FeedbackView(isPresented: $isFeedbackPresented)
                     }
                 }
-                .padding(.bottom, 10)
+
+                // Footer
+                Section {
+                    VStack {
+                        Text("Made with ❤️ by coder_bat")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+
+                        Button(action: {
+                            if let url = URL(string: "https://lovepeaceand.dev") {
+                                UIApplication.shared.open(url)
+                            }
+                        }) {
+                            Text("lovepeaceand.dev")
+                                .font(.footnote)
+                                .underline()
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
             }
             .navigationTitle("Settings")
         }

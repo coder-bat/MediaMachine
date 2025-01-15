@@ -44,6 +44,7 @@
 				DiscoverView.swift,
 				DownloadManagerView.swift,
 				EpisodeListView.swift,
+				FeedbackView.swift,
 				LibraryView.swift,
 				MainView.swift,
 				Models.swift,
