@@ -42,6 +42,7 @@
 			membershipExceptions = (
 				ContentView.swift,
 				DiscoverView.swift,
+				DownloadManagerView.swift,
 				EpisodeListView.swift,
 				LibraryView.swift,
 				MainView.swift,

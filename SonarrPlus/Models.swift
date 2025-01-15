@@ -283,3 +283,57 @@ struct ShowToAdd: Codable {
     var addOptions: AddOptions?
 }
 
+struct SonarrStats: Decodable {
+    let totalShows: Int?
+    let totalEpisodes: Int?
+    let diskSpaceUsed: Double?
+    let diskSpaceFree: Double?
+}
+
+struct Series: Decodable {
+    let id: Int
+    let title: String
+}
+
+struct DiskSpace: Decodable {
+    let path: String
+    let label: String
+    let freeSpace: Double
+    let totalSpace: Double
+
+    var usedSpace: Double {
+        totalSpace - freeSpace
+    }
+}
+
+struct History: Decodable {
+    let records: [HistoryRecord]
+}
+
+struct HistoryRecord: Decodable {
+    let eventType: String
+}
+
+struct DownloadItem: Decodable, Identifiable {
+    let id: Int
+    let title: String
+    let size: Double // Total size in bytes
+    let sizeleft: Double // Remaining size in bytes
+    let status: String
+    let timeleft: String
+    let quality: Quality
+    let estimatedCompletionTime: String
+
+    struct Quality: Decodable {
+        let quality: QualityDetail
+
+        struct QualityDetail: Decodable {
+            let name: String
+            let resolution: Int
+        }
+    }
+}
+
+struct DownloadQueueResponse: Decodable {
+    let records: [DownloadItem]
+}

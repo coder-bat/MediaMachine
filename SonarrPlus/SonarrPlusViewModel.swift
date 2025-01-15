@@ -8,43 +8,12 @@
 import Foundation
 import Combine
 
-struct SonarrStats: Decodable {
-    let totalShows: Int?
-    let totalEpisodes: Int?
-    let diskSpaceUsed: Double?
-    let diskSpaceFree: Double?
-}
-
-struct Series: Decodable {
-    let id: Int
-    let title: String
-}
-
-struct DiskSpace: Decodable {
-    let path: String
-    let label: String
-    let freeSpace: Double
-    let totalSpace: Double
-
-    var usedSpace: Double {
-        totalSpace - freeSpace
-    }
-}
-
-struct History: Decodable {
-    let records: [HistoryRecord]
-}
-
-struct HistoryRecord: Decodable {
-    let eventType: String
-}
-
-
 class SonarrPlusViewModel: ObservableObject {
     @Published var isAuthenticated = false
     @Published var rootFolderPath: String? // To store the selected root folder path
     @Published var stats: SonarrStats?
-    
+    @Published var downloadQueue: [DownloadItem] = []
+
     static let shared = SonarrPlusViewModel()
 
     @Published var shows: [Show] = [] {
@@ -501,6 +470,48 @@ class SonarrPlusViewModel: ObservableObject {
         
         // Convert bytes to GB
         return (totalUsedSpace / 1_073_741_824, totalFreeSpace / 1_073_741_824)
+    }
+    
+    func fetchDownloadQueue() async {
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
+        guard let url = URL(string: "\(serverURL)/api/v3/queue") else { return }
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
+
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            print("Queue Response: \(String(data: data, encoding: .utf8) ?? "No data")")
+
+            // Decode the wrapped response
+            let decodedResponse = try JSONDecoder().decode(DownloadQueueResponse.self, from: data)
+            DispatchQueue.main.async {
+                self.downloadQueue = decodedResponse.records
+            }
+        } catch {
+            print("Error fetching download queue: \(error)")
+        }
+    }
+
+
+    func cancelDownload(id: Int) async {
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
+        guard let url = URL(string: "\(serverURL)/api/v3/queue/\(id)") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                DispatchQueue.main.async {
+                    self.downloadQueue.removeAll { $0.id == id }
+                }
+            } else {
+                print("Failed to cancel download: \(response)")
+            }
+        } catch {
+            print("Error canceling download: \(error)")
+        }
     }
 
     private func getTodayISODate() -> String {

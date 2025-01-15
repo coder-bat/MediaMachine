@@ -21,7 +21,11 @@ struct MainView: View {
                         .tabItem {
                             Label("Library", systemImage: "film")
                         }
-
+                    
+                    DownloadManagerView()
+                        .tabItem {
+                            Label("Downloads", systemImage: "arrow.down.circle")
+                        }
                     SettingsView()
                         .tabItem {
                             Label("Settings", systemImage: "gear")
