@@ -3,7 +3,7 @@ import SwiftUI
 struct ShowDetailView: View {
     let show: Show // Existing functionality
     let discoverShow: DiscoverShow? // New functionality for DiscoverView integration
-
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {

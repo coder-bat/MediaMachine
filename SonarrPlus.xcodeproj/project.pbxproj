@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		46747AFD2D382FDD003A501D /* .env in Resources */ = {isa = PBXBuildFile; fileRef = 46747AFC2D382FDD003A501D /* .env */; };
 		46CE41332D37F62E00D7B743 /* CustomInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 46CE41302D37F51E00D7B743 /* CustomInfo.plist */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		46747AF42D382710003A501D /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		46747AFC2D382FDD003A501D /* .env */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env; sourceTree = "<group>"; };
 		46CE41302D37F51E00D7B743 /* CustomInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = CustomInfo.plist; sourceTree = "<group>"; };
 		46CE41352D37F99400D7B743 /* SonarrPlus.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = SonarrPlus.xcodeproj; sourceTree = "<group>"; };
 		46F356C92D37F14500AD69F1 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
@@ -40,6 +43,7 @@
 		4610E6A12D3800AA00E82035 /* Exceptions for "SonarrPlus" folder in "SonarrPlus" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				AppStorageKeys.swift,
 				ContentView.swift,
 				DiscoverView.swift,
 				DownloadManagerView.swift,
@@ -53,7 +57,6 @@
 				QualityPicker.swift,
 				SearchView.swift,
 				SettingsView.swift,
-				Show.swift,
 				ShowDetailView.swift,
 				SonarrPlusApp.swift,
 				SonarrPlusViewModel.swift,
@@ -129,6 +132,8 @@
 		46AC851C2D33760C003450EE = {
 			isa = PBXGroup;
 			children = (
+				46747AFC2D382FDD003A501D /* .env */,
+				46747AF42D382710003A501D /* .gitignore */,
 				46AC85272D33760C003450EE /* SonarrPlus */,
 				46AC85392D33760D003450EE /* SonarrPlusTests */,
 				46AC85432D33760D003450EE /* SonarrPlusUITests */,
@@ -265,6 +270,8 @@
 			);
 			mainGroup = 46AC851C2D33760C003450EE;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 46AC85262D33760C003450EE /* Products */;
 			projectDirPath = "";
@@ -288,6 +295,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				46747AFD2D382FDD003A501D /* .env in Resources */,
 				46CE41332D37F62E00D7B743 /* CustomInfo.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -491,9 +499,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = coderbat.SonarrPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
+				TMDB_API_KEY = 037c65046ea6cdbf6a8b6179420dd283;
 			};
 			name = Debug;
 		};
@@ -521,9 +532,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = coderbat.SonarrPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
+				TMDB_API_KEY = 037c65046ea6cdbf6a8b6179420dd283;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

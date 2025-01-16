@@ -249,7 +249,6 @@ class SonarrPlusViewModel: ObservableObject {
                 }
             } catch {
                 print("Failed to decode shows: \(error.localizedDescription)")
-                print("Raw JSON: \(String(data: data, encoding: .utf8) ?? "Invalid JSON")")
             }
         }.resume()
     }
@@ -332,17 +331,6 @@ class SonarrPlusViewModel: ObservableObject {
             request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
 
             URLSession.shared.dataTask(with: request) { data, response, error in
-                if let error = error {
-                    print("Failed to add show: \(error.localizedDescription)")
-                    return
-                }
-
-                if let httpResponse = response as? HTTPURLResponse {
-                    print("Response Status Code: \(httpResponse.statusCode)")
-                    if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                        print("Response Body: \(responseString)")
-                    }
-                }
                 completion()
             }.resume()
 
@@ -460,7 +448,6 @@ class SonarrPlusViewModel: ObservableObject {
         request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
 
         let (data, _) = try await URLSession.shared.data(for: request)
-        print("DiskSpace Response: \(String(data: data, encoding: .utf8) ?? "No data")")
 
         let disks = try JSONDecoder().decode([DiskSpace].self, from: data)
         
@@ -480,7 +467,6 @@ class SonarrPlusViewModel: ObservableObject {
 
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
-            print("Queue Response: \(String(data: data, encoding: .utf8) ?? "No data")")
 
             // Decode the wrapped response
             let decodedResponse = try JSONDecoder().decode(DownloadQueueResponse.self, from: data)

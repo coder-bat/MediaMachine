@@ -55,15 +55,20 @@ struct LibraryView: View {
             // Show List
             List(sortedAndFilteredShows) { show in
                 VStack(alignment: .leading) {
-                    Text(show.title)
-                        .font(.headline)
-
-                    HStack {
-                        Text("Status: \(show.status.capitalized)")
-                        Spacer()
-                        Text(show.monitored ? "Monitored" : "Not Monitored")
-                            .foregroundColor(show.monitored ? .green : .red)
-                            .font(.subheadline)
+                    NavigationLink(destination: ShowDetailView(show: show, discoverShow: nil)) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(show.title)
+                                    .font(.headline)
+                                Text("Status: \(show.status.capitalized)")
+                            }
+                            Spacer()
+                            HStack {
+                                Text(show.monitored ? "Monitored" : "Not Monitored")
+                                    .foregroundColor(show.monitored ? .green : .red)
+                                    .font(.subheadline)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, 5)

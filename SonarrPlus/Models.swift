@@ -204,8 +204,6 @@ struct DiscoverShow: Codable, Identifiable {
             posterUrl = nil
         }
         
-        print("here 2", posterPath)
-
         // Extract voteAverage from ratings
         if let ratings = try container.decodeIfPresent([String: Double].self, forKey: .ratings) {
             voteAverage = ratings["value"]
