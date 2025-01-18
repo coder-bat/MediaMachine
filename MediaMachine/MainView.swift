@@ -33,7 +33,6 @@ struct MainView: View {
                 }
                 .accentColor(.blue) // Tab bar tint color
             }
-            .navigationTitle("MediaMachine")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

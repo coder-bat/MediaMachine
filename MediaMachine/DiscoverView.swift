@@ -9,6 +9,8 @@ struct DiscoverView: View {
     @State private var addedToSonarr: [Int: Bool] = [:] // Track added state by show ID
     @State private var sortByHighestRating: Bool = false
     @State private var selectedFilter: DiscoverFilter = .popular
+    @State private var isSidebarVisible: Bool = false
+    @State private var selectedCategory: String? = nil
 
     @EnvironmentObject var viewModel: MediaMachineViewModel
 
@@ -20,32 +22,57 @@ struct DiscoverView: View {
 
     var body: some View {
         NavigationView {
-            VStack {
-                // Search Bar
-                TextField("Search for shows...", text: $query, onCommit: {
-                    searchShows()
-                })
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-
-                // Filter Picker
-                Picker("Filter", selection: $selectedFilter) {
-                    ForEach(DiscoverFilter.allCases, id: \.self) { filter in
-                        Text(filter.rawValue).tag(filter)
+            ZStack {
+                // Fullscreen ShowListView
+                ShowListView(currentShows: currentShows)
+                
+                // Sidebar overlay
+                if isSidebarVisible {
+                    GeometryReader { geometry in
+                        VStack {
+                            // Search Bar
+                            TextField("Search for shows...", text: $query, onCommit: {
+                                searchShows()
+                            })
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding()
+                            
+                            // Filter Picker
+                            Picker("Filter", selection: $selectedFilter) {
+                                ForEach(DiscoverFilter.allCases, id: \.self) { filter in
+                                    Text(filter.rawValue).tag(filter)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .padding()
+                        }
+                        .frame(width: geometry.size.width * 0.7) // Sidebar width (70% of screen width)
+                        .background(Color(.systemGray6))
+                        .shadow(radius: 10)
+                        .transition(.move(edge: .leading)) // Animate the sidebar appearance
                     }
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-
-                ShowListView(currentShows: currentShows)
             }
             .navigationTitle("Discover")
-            .onChange(of: selectedFilter) {
+            .navigationBarItems(leading: sidebarToggleButton)
+            .onChange(of: selectedFilter) { oldValue, newValue in
                 fetchShows()
             }
             .onAppear {
                 fetchShows()
             }
+        }
+    }
+        
+    // Sidebar Toggle Button
+    private var sidebarToggleButton: some View {
+        Button(action: {
+            withAnimation {
+                isSidebarVisible.toggle()
+            }
+        }) {
+            SwiftUI.Image(systemName: isSidebarVisible ? "xmark" : "line.horizontal.3")
+                .imageScale(.large)
         }
     }
 
@@ -81,6 +108,7 @@ struct DiscoverView: View {
         }
 
         let urlString = "https://api.themoviedb.org/3/tv/\(endpoint)?api_key=\(apiKey)&language=en-US&page=1"
+        
         guard let url = URL(string: urlString) else { return }
 
         URLSession.shared.dataTask(with: url) { data, response, error in
@@ -95,6 +123,7 @@ struct DiscoverView: View {
                 let decodedResponse = try JSONDecoder().decode(DiscoverResponse.self, from: data)
                 DispatchQueue.main.async {
                     self.popularShows = decodedResponse.results
+                    self.searchResults = decodedResponse.results
                 }
             } catch {
                 print("Failed to decode response: \(error.localizedDescription)")
