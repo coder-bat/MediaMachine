@@ -43,10 +43,10 @@
 		460EFE942D3AA43C00194660 /* Exceptions for "MediaMachine" folder in "MediaMachine" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				ActivityManagerView.swift,
 				AppStorageKeys.swift,
 				ContentView.swift,
 				DiscoverView.swift,
-				DownloadManagerView.swift,
 				EpisodeListView.swift,
 				FeedbackView.swift,
 				LibraryView.swift,

@@ -22,9 +22,9 @@ struct MainView: View {
                             Label("Library", systemImage: "film")
                         }
 
-                    DownloadManagerView()
+                    ActivityManagerView()
                         .tabItem {
-                            Label("Downloads", systemImage: "arrow.down.circle")
+                            Label("Activity", systemImage: "figure.run")
                         }
                     SettingsView()
                         .tabItem {

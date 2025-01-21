@@ -46,6 +46,7 @@ struct Show: Identifiable, Codable, ShowType {
     var qualityProfileId: Int?
     let posterUrl: String? //
     var rootFolderPath: String?
+    var tmdbId: Int?
 
 
     enum CodingKeys: String, CodingKey {
@@ -363,6 +364,7 @@ struct SonarrStats: Decodable {
     let totalEpisodes: Int?
     let diskSpaceUsed: Double?
     let diskSpaceFree: Double?
+    let disks: [DiskSpace]
 }
 
 struct Series: Decodable {

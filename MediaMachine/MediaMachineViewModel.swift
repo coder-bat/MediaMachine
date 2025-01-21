@@ -239,6 +239,7 @@ class MediaMachineViewModel: ObservableObject {
                 print("No data received from server")
                 return
             }
+            print(String(data: data, encoding: .utf8) ?? "No data returned")
 
             do {
                 let decoder = JSONDecoder()
@@ -415,14 +416,14 @@ class MediaMachineViewModel: ObservableObject {
     func fetchStats() async {
         do {
             let totalShows = try await fetchTotalShows()
-            let (diskSpaceUsed, diskSpaceFree) = try await fetchDiskSpace()
-
+            let (disks, diskSpaceUsed, diskSpaceFree) = try await fetchDiskSpace()
             DispatchQueue.main.async {
                 self.stats = SonarrStats(
                     totalShows: totalShows,
                     totalEpisodes: 0, // Optional to calculate from another endpoint
                     diskSpaceUsed: diskSpaceUsed,
-                    diskSpaceFree: diskSpaceFree
+                    diskSpaceFree: diskSpaceFree,
+                    disks: disks
                 )
             }
         } catch {
@@ -441,22 +442,20 @@ class MediaMachineViewModel: ObservableObject {
         return series.count
     }
 
-    private func fetchDiskSpace() async throws -> (Double, Double) {
-        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return (0, 0) }
-        guard let url = URL(string: "\(serverURL)/api/v3/diskspace") else { return (0, 0) }
+    private func fetchDiskSpace() async throws -> ([DiskSpace], Double, Double) {
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return ([], 0, 0) }
+        guard let url = URL(string: "\(serverURL)/api/v3/diskspace") else { return ([], 0, 0) }
         var request = URLRequest(url: url)
         request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
 
         let (data, _) = try await URLSession.shared.data(for: request)
-
         let disks = try JSONDecoder().decode([DiskSpace].self, from: data)
-
-        // Aggregate free and used space across all disks
+//        Aggregate free and used space across all disks
         let totalUsedSpace = disks.reduce(0) { $0 + $1.usedSpace }
         let totalFreeSpace = disks.reduce(0) { $0 + $1.freeSpace }
 
         // Convert bytes to GB
-        return (totalUsedSpace / 1_073_741_824, totalFreeSpace / 1_073_741_824)
+        return (disks, totalUsedSpace / 1_073_741_824, totalFreeSpace / 1_073_741_824)
     }
 
     func fetchDownloadQueue() async {

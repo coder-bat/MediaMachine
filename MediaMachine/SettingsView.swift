@@ -101,7 +101,6 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
-            .navigationTitle("Settings")
             .alert("Disconnect from Sonarr?", isPresented: $showDisconnectAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Disconnect", role: .destructive) {

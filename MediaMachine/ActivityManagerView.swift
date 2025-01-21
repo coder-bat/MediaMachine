@@ -1,10 +1,14 @@
 import SwiftUI
 
-struct DownloadManagerView: View {
+struct ActivityManagerView: View {
     @StateObject private var viewModel = MediaMachineViewModel.shared
 
     var body: some View {
         NavigationView {
+            // if no items then print no activity to show
+            if viewModel.downloadQueue.isEmpty {
+                Text("No activity to show")
+            }
             List(viewModel.downloadQueue) { item in
                 VStack(alignment: .leading, spacing: 10) {
                     Text(item.title)
@@ -42,7 +46,6 @@ struct DownloadManagerView: View {
                 }
                 .padding(.vertical, 5)
             }
-            .navigationTitle("Download Manager")
             .refreshable {
                 Task {
                     await viewModel.fetchDownloadQueue()

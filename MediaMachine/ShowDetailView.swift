@@ -5,49 +5,83 @@ struct ShowDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Show Poster
-                if let posterPath = show.posterPath {
-                    AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")) { image in
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .cornerRadius(8)
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: 300)
-                            .cornerRadius(8)
-                    }
-                }
-
+            VStack(alignment: .leading, spacing: 30) {
                 // Show Title
                 Text(show.title ?? "")
-                    .font(.largeTitle)
+                    .font(.title)
                     .fontWeight(.bold)
 
-                // Show Status
-                HStack {
-                    Text("Status: \(show.status?.capitalized ?? "Undefined")")
-                        .font(.headline)
-                        .foregroundColor(show.ended ?? false ? .red : .green)
-                    Spacer()
-                    if show.monitored ?? false {
-                        Text("Monitored")
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
+                HStack(spacing: 18) {
+                    let posterURL = show.posterPath.map { "https://image.tmdb.org/t/p/w500\($0)" } ?? show.posterUrl
+                    
+                    if let posterURL = posterURL, let url = URL(string: posterURL) {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .frame(height: 360)
+                                .frame(width: 201)
+                                .cornerRadius(8)
+                        } placeholder: {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(height: 360)
+                                .frame(width: 201)
+                                .cornerRadius(4)
+                        }
                     } else {
-                        Text("Not Monitored")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 360)
+                            .frame(width: 201)
+                            .cornerRadius(4)
+                            .overlay(
+                                Text("No Image")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                            )
                     }
-                }
-
-                // Network and Runtime
-                if let network = show.network, let runtime = show.runtime {
-                    Text("\(network) • \(runtime) min per episode")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 20, content: {
+                        // Show Status
+                        Text("Status: \(show.status?.capitalized ?? "N/A")")
+                            .font(.headline)
+                            .foregroundColor(show.ended ?? false ? .red : .green)
+                        
+                        if show.monitored ?? false {
+                            Text("Monitored")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        } else {
+                            Text("Not Monitored")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        
+                        // Network and Runtime
+                        if let network = show.network, let runtime = show.runtime {
+                            Text("\(network) • \(runtime) min per episode")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        } else if show.monitored == nil {
+                            Text("Add to Sonarr to view more metadata")
+                                .font(.caption2)
+                            // Add to Sonarr for Discover Shows
+                            Button("Add") {
+                                addShowToSonarr(show)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .multilineTextAlignment(.leading)
+                        }
+                        
+                        // Air Dates
+                        if let firstAired = show.firstAired, let nextAiring = show.nextAiring {
+                            VStack(alignment: .leading) {
+                                Text("First Aired: \(formatDate(firstAired))")
+                                Text("Next Airing: \(formatDate(nextAiring))")
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        }
+                    })
                 }
 
                 // Overview
@@ -58,16 +92,6 @@ struct ShowDetailView: View {
                     Text(overview)
                         .font(.body)
                         .foregroundColor(.gray)
-                }
-
-                // Air Dates
-                if let firstAired = show.firstAired, let nextAiring = show.nextAiring {
-                    VStack(alignment: .leading) {
-                        Text("First Aired: \(formatDate(firstAired))")
-                        Text("Next Airing: \(formatDate(nextAiring))")
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
                 }
 
                 // Seasons
@@ -94,16 +118,9 @@ struct ShowDetailView: View {
                         }
                     }
                 }
-
-                // Add to Sonarr for Discover Shows
-                Button("Add to Sonarr") {
-                    addShowToSonarr(show)
-                }
-                .buttonStyle(.borderedProminent)
             }
             .padding()
         }
-        .navigationTitle("Show Details")
     }
 
     // Helper function to format ISO 8601 dates

@@ -21,7 +21,7 @@ struct EpisodeListView: View {
                         Text("Downloaded")
                             .foregroundColor(.green)
                     } else {
-                        Text("Not Downloaded")
+                        Text("Not in server")
                             .foregroundColor(.red)
                     }
 

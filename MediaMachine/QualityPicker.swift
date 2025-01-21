@@ -27,7 +27,7 @@ struct QualityPicker: View {
             }
             .pickerStyle(WheelPickerStyle())
 
-            Toggle("Start Download Immediately", isOn: $startDownload)
+            Toggle("Moinitor?", isOn: $startDownload)
                 .padding()
 
             Button(action: {

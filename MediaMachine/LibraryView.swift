@@ -21,13 +21,6 @@ struct LibraryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Heading
-            Text("Currently in Sonarr")
-                .font(.title2)
-                .bold()
-                .padding(.horizontal)
-                .padding(.top, 8)
-
             // Toolbar with Sort and Filter
             HStack {
                 Button(action: {

@@ -87,6 +87,8 @@ struct ShowListView: View {
                                 }
                                 // Monitored Status
                                 
+                                // if
+                                
                                 // Button (Only shown if monitored is nil)
                                 if show.monitored == nil {
                                     Button(action: buttonAction(for: show)) {

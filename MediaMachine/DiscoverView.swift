@@ -53,7 +53,6 @@ struct DiscoverView: View {
                     }
                 }
             }
-            .navigationTitle("Discover")
             .navigationBarItems(leading: sidebarToggleButton)
             .onChange(of: selectedFilter) { oldValue, newValue in
                 fetchShows()
@@ -118,6 +117,7 @@ struct DiscoverView: View {
             }
 
             guard let data = data else { return }
+            
 
             do {
                 let decodedResponse = try JSONDecoder().decode(DiscoverResponse.self, from: data)

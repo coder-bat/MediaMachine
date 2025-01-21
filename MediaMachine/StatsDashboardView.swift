@@ -13,6 +13,17 @@ struct StatsDashboardView: View {
                         Spacer()
                         ScrollView {
                             VStack(spacing: 20) {
+                                // loop for each item in stats.disks, create a statscardview
+                                ForEach(stats.disks, id: \.path) { disk in
+                                    // convert disk space from bytes
+                                    StatsCardView(
+                                        iconName: "externaldrive.connected.to.line.below",
+                                        title: disk.path ?? "Unknown Disk",
+                                        value: "\(String(format: "%.2f", disk.usedSpace / 1_073_741_824 ?? 0.0)) GB / \(String(format: "%.2f", disk.totalSpace / 1_073_741_824 ?? 0.0)) GB"
+                                    )
+                                }
+
+//
                                 StatsCardView(
                                     iconName: "tv",
                                     title: "Total Shows",
@@ -38,7 +49,6 @@ struct StatsDashboardView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                     }
                 }
-                .navigationTitle("Server Stats")
                 .onAppear {
                     Task {
                         await viewModel.fetchStats()
