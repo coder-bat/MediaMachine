@@ -13,6 +13,7 @@ class MediaMachineViewModel: ObservableObject {
     @Published var rootFolderPath: String? // To store the selected root folder path
     @Published var stats: SonarrStats?
     @Published var downloadQueue: [DownloadItem] = []
+    @Published var hasIndexers: Bool = false
 
     static let shared = MediaMachineViewModel()
 
@@ -102,10 +103,7 @@ class MediaMachineViewModel: ObservableObject {
 
 
     func fetchShows() {
-        guard let serverURL = serverURL, let apiKey = apiKey else {
-            print("Server URL or API Key is missing")
-            return
-        }
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
 
         let url = URL(string: "\(serverURL)/api/v3/series?apikey=\(apiKey)")!
 
@@ -131,54 +129,63 @@ class MediaMachineViewModel: ObservableObject {
         }.resume()
     }
 
-    func fetchEpisodes(forSeason seasonNumber: Int, show: Show, completion: @escaping ([Episode]) -> Void) {
-        guard let serverURL = serverURL, let apiKey = apiKey else {
-            print("Server URL or API Key is missing")
-            completion([])
+    func fetchEpisodes(for show: Show, completion: @escaping (Result<[Episode], Error>) -> Void) {
+        guard let baseURL = publicServerURL, let apiKey = publicApiKey else {
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing Sonarr configuration"])))
             return
         }
 
-        let url = URL(string: "\(serverURL)/api/v3/episode?seriesId=\(show.id)&seasonNumber=\(seasonNumber)&apikey=\(apiKey)")!
+        let urlString = "\(baseURL)/api/v3/episode"
+        guard var urlComponents = URLComponents(string: urlString) else {
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey),
+            URLQueryItem(name: "seriesId", value: String(show.id))
+        ]
+
+        guard let url = urlComponents.url else {
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create URL"])))
+            return
+        }
 
         URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                print("Failed to fetch episodes: \(error.localizedDescription)")
-                completion([])
-                return
-            }
-
-            guard let data = data else {
-                print("No data received")
-                completion([])
-                return
-            }
-
-            do {
-                var episodes = try JSONDecoder().decode([Episode].self, from: data)
-
-                // Assign the show title to each episode
-                episodes = episodes.map { episode in
-                    var updatedEpisode = episode
-                    updatedEpisode.showTitle = show.title
-                    return updatedEpisode
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(.failure(error))
+                    return
                 }
 
-                DispatchQueue.main.async {
-                    completion(episodes)
+                guard let data = data else {
+                    completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                    return
                 }
-            } catch {
-                print("Failed to decode episodes: \(error.localizedDescription)")
-                completion([])
+
+                do {
+                    var episodes = try JSONDecoder().decode([Episode].self, from: data)
+                    // Ensure seriesId is set correctly for each episode
+                    episodes = episodes.map { episode in
+                        var updatedEpisode = episode
+                        updatedEpisode.seriesId = show.id
+                        return updatedEpisode
+                    }
+                    completion(.success(episodes))
+                } catch {
+                    print("Error decoding episodes: \(error)")
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("Received JSON: \(jsonString)")
+                    }
+                    completion(.failure(error))
+                }
             }
         }.resume()
     }
 
 
     func checkForUpcomingEpisodes() {
-        guard let serverURL = serverURL, let apiKey = apiKey else {
-            print("Server URL or API Key is missing")
-            return
-        }
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
 
         let showsToNotify = shows.filter { $0.notificationsEnabled ?? false } // Filter enabled shows
 
@@ -221,10 +228,7 @@ class MediaMachineViewModel: ObservableObject {
     }
 
     func fetchLibrary() {
-        guard let serverURL = serverURL, let apiKey = apiKey else {
-            print("Server URL or API Key is missing")
-            return
-        }
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
 
         let urlString = "\(serverURL)/api/v3/series?apikey=\(apiKey)"
         guard let url = URL(string: urlString) else { return }
@@ -257,10 +261,7 @@ class MediaMachineViewModel: ObservableObject {
 
 
     func fetchRootFolders() {
-        guard let serverURL = serverURL, let apiKey = apiKey else {
-            print("Server URL or API Key is missing")
-            return
-        }
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
 
         let urlString = "\(serverURL)/api/v3/rootfolder?apikey=\(apiKey)"
         guard let url = URL(string: urlString) else { return }
@@ -285,7 +286,7 @@ class MediaMachineViewModel: ObservableObject {
     }
 
     func fetchQualityProfiles(completion: @escaping ([QualityProfile]?) -> Void) {
-        guard let serverURL = serverURL, let apiKey = apiKey else { return }
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
         let urlString = "\(serverURL)/api/v3/qualityprofile?apikey=\(apiKey)"
         guard let url = URL(string: urlString) else { return }
 
@@ -310,10 +311,7 @@ class MediaMachineViewModel: ObservableObject {
 
 
     func addShow(show: Show, qualityProfileId: Int, startDownload: Bool, completion: @escaping () -> Void) {
-        guard let serverURL = publicServerURL, let apiKey = publicApiKey else {
-            print("Server URL or API Key is missing")
-            return
-        }
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
 
         let urlString = "\(serverURL)/api/v3/series"
         guard let url = URL(string: urlString) else { return }
@@ -450,7 +448,7 @@ class MediaMachineViewModel: ObservableObject {
 
         let (data, _) = try await URLSession.shared.data(for: request)
         let disks = try JSONDecoder().decode([DiskSpace].self, from: data)
-//        Aggregate free and used space across all disks
+        //        Aggregate free and used space across all disks
         let totalUsedSpace = disks.reduce(0) { $0 + $1.usedSpace }
         let totalFreeSpace = disks.reduce(0) { $0 + $1.freeSpace }
 
@@ -503,5 +501,315 @@ class MediaMachineViewModel: ObservableObject {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.string(from: Date())
+    }
+
+    func updateSeasonMonitoring(showId: Int, seasonNumber: Int, monitored: Bool, completion: @escaping (Bool) -> Void) {
+        guard let baseURL = publicServerURL, let apiKey = publicApiKey else { return }
+
+        // First get the series data
+        let urlString = "\(baseURL)/api/v3/series/\(showId)"
+        guard var urlComponents = URLComponents(string: urlString) else {
+            print("Invalid URL")
+            completion(false)
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey)
+        ]
+
+        guard let url = urlComponents.url else {
+            print("Failed to create URL")
+            completion(false)
+            return
+        }
+
+        // First GET the series
+        var getRequest = URLRequest(url: url)
+        getRequest.httpMethod = "GET"
+
+        URLSession.shared.dataTask(with: getRequest) { data, response, error in
+            guard let data = data else {
+                print("No series data received")
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+                return
+            }
+
+            do {
+                // Decode the current series
+                var series = try JSONDecoder().decode(Show.self, from: data)
+
+                // Update the season monitoring
+                if var seasons = series.seasons {
+                    for i in 0..<seasons.count {
+                        if seasons[i].seasonNumber == seasonNumber {
+                            seasons[i].monitored = monitored
+                            break
+                        }
+                    }
+                    series.seasons = seasons
+                }
+
+                // Create PUT request with updated series
+                var putRequest = URLRequest(url: url)
+                putRequest.httpMethod = "PUT"
+                putRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+                // Encode the entire updated series
+                let updatedData = try JSONEncoder().encode(series)
+                putRequest.httpBody = updatedData
+
+                print("Sending update request for season \(seasonNumber) with monitored = \(monitored)")
+                if let requestBody = String(data: updatedData, encoding: .utf8) {
+                    print("Request body: \(requestBody)")
+                }
+
+                // Send the PUT request
+                URLSession.shared.dataTask(with: putRequest) { data, response, error in
+                    DispatchQueue.main.async {
+                        if let error = error {
+                            print("Error updating series: \(error)")
+                            completion(false)
+                            return
+                        }
+
+                        guard let httpResponse = response as? HTTPURLResponse else {
+                            print("Invalid response")
+                            completion(false)
+                            return
+                        }
+
+                        let success = httpResponse.statusCode == 200 || httpResponse.statusCode == 202
+                        print("Series update status code: \(httpResponse.statusCode)")
+
+                        if !success {
+                            if let responseData = data, let responseStr = String(data: responseData, encoding: .utf8) {
+                                print("Error response: \(responseStr)")
+                            }
+                        }
+
+                        completion(success)
+                    }
+                }.resume()
+
+            } catch {
+                print("Error processing series: \(error)")
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Received JSON: \(jsonString)")
+                }
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+
+    func updateEpisodeMonitoring(episodeId: Int, monitored: Bool, completion: @escaping (Bool) -> Void) {
+        guard let baseURL = publicServerURL, let apiKey = publicApiKey else { return }
+
+        let urlString = "\(baseURL)/api/v3/episode/monitor"
+        guard var urlComponents = URLComponents(string: urlString) else {
+            completion(false)
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey)
+        ]
+
+        guard let url = urlComponents.url else {
+            completion(false)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let updateData = [
+            "episodeIds": [episodeId],
+            "monitored": monitored
+        ] as [String : Any]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: updateData)
+
+            print("Sending update request for episode \(episodeId) with monitored = \(monitored)")
+            if let requestBody = String(data: request.httpBody!, encoding: .utf8) {
+                print("Request body: \(requestBody)")
+            }
+        } catch {
+            print("Error encoding update data: \(error)")
+            completion(false)
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error updating episode \(episodeId): \(error)")
+                    completion(false)
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("Invalid response for episode \(episodeId)")
+                    completion(false)
+                    return
+                }
+
+                let success = httpResponse.statusCode == 200 || httpResponse.statusCode == 202
+                print("Episode \(episodeId) update status code: \(httpResponse.statusCode)")
+
+                if !success {
+                    if let responseData = data, let responseStr = String(data: responseData, encoding: .utf8) {
+                        print("Error response for episode \(episodeId): \(responseStr)")
+                    }
+                }
+
+                completion(success)
+            }
+        }.resume()
+    }
+
+    func searchEpisode(episodeId: Int, completion: @escaping (Bool) -> Void) {
+        guard let baseURL = publicServerURL, let apiKey = publicApiKey else { return }
+
+        let urlString = "\(baseURL)/api/v3/command"
+        guard var urlComponents = URLComponents(string: urlString) else {
+            completion(false)
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey)
+        ]
+
+        guard let url = urlComponents.url else {
+            completion(false)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let commandData = [
+            "name": "EpisodeSearch",
+            "episodeIds": [episodeId]
+        ] as [String : Any]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: commandData)
+        } catch {
+            print("Error encoding command data: \(error)")
+            completion(false)
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error searching episode: \(error)")
+                    completion(false)
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(false)
+                    return
+                }
+
+                completion(httpResponse.statusCode == 200 || httpResponse.statusCode == 201)
+            }
+        }.resume()
+    }
+
+    func deleteEpisodeFile(episodeId: Int, completion: @escaping (Bool) -> Void) {
+        guard let baseURL = publicServerURL, let apiKey = publicApiKey else { return }
+
+        let urlString = "\(baseURL)/api/v3/episodefile/\(episodeId)"
+        guard var urlComponents = URLComponents(string: urlString) else {
+            completion(false)
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey)
+        ]
+
+        guard let url = urlComponents.url else {
+            completion(false)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error deleting episode file: \(error)")
+                    completion(false)
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(false)
+                    return
+                }
+
+                completion(httpResponse.statusCode == 200 || httpResponse.statusCode == 202)
+            }
+        }.resume()
+    }
+
+    // Add this function to check indexers
+    func checkIndexers() {
+        guard let serverURL = publicServerURL, let apiKey = publicApiKey else { return }
+
+        let urlString = "\(serverURL)/api/v3/indexer"
+        guard var urlComponents = URLComponents(string: urlString) else {
+            hasIndexers = false
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey)
+        ]
+
+        guard let url = urlComponents.url else {
+            hasIndexers = false
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data,
+                      let indexers = try? JSONDecoder().decode([Indexer].self, from: data) else {
+                    self?.hasIndexers = false
+                    return
+                }
+                
+                print("Indexers: \(indexers) \(indexers.contains { $0.enable })")
+
+                // Check if there are any enabled indexers
+                self?.hasIndexers = indexers.contains { $0.enable }
+            }
+        }.resume()
+    }
+}
+
+// Add this struct to decode indexer response
+struct Indexer: Codable {
+    let enable: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case enable
     }
 }

@@ -9,7 +9,7 @@ struct LibraryView: View {
         var shows = viewModel.shows
 
         if sortAlphabetically {
-            shows.sort { $0.title?.localizedCaseInsensitiveCompare($1.title ?? "Undefined Title") == .orderedAscending }
+            shows.sort { ($0.title ?? $0.name).localizedCaseInsensitiveCompare($1.title ?? $1.name) == .orderedAscending }
         }
 
         if showOnlyMonitored {
@@ -43,13 +43,37 @@ struct LibraryView: View {
                 }
             }
             .padding(.horizontal)
-            .padding(.vertical, 8) // Reduce vertical spacing for compactness
-            
-            ShowListView(currentShows: sortedAndFilteredShows)
+            .padding(.vertical, 8)
+
+            if viewModel.shows.isEmpty {
+                VStack {
+                    Spacer()
+                    ProgressView()
+                        .padding()
+                    Text("Loading library...")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            } else {
+                ShowListView(currentShows: sortedAndFilteredShows)
+                    .environment(\.disableInfiniteScroll, true)
+            }
         }
         .navigationTitle("Library")
         .onAppear {
             viewModel.fetchLibrary()
         }
+    }
+}
+
+// Add environment key to control infinite scroll
+private struct DisableInfiniteScrollKey: EnvironmentKey {
+    static let defaultValue: Bool = false
+}
+
+extension EnvironmentValues {
+    var disableInfiniteScroll: Bool {
+        get { self[DisableInfiniteScrollKey.self] }
+        set { self[DisableInfiniteScrollKey.self] = newValue }
     }
 }

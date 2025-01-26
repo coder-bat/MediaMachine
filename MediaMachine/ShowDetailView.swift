@@ -1,130 +1,180 @@
 import SwiftUI
 
 struct ShowDetailView: View {
-    let show: Show // Existing functionality
+    let show: Show
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
-                // Show Title
-                Text(show.title ?? "")
-                    .font(.title)
-                    .fontWeight(.bold)
-
-                HStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 25) {
+                // Header with Poster and Meta Info
+                HStack(spacing: 20) {
+                    // Poster
                     let posterURL = show.posterPath.map { "https://image.tmdb.org/t/p/w500\($0)" } ?? show.posterUrl
-                    
+
                     if let posterURL = posterURL, let url = URL(string: posterURL) {
                         AsyncImage(url: url) { image in
                             image
                                 .resizable()
-                                .frame(height: 360)
-                                .frame(width: 201)
-                                .cornerRadius(8)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 160)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .shadow(radius: 8)
                         } placeholder: {
                             Rectangle()
                                 .fill(Color.gray.opacity(0.3))
-                                .frame(height: 360)
-                                .frame(width: 201)
-                                .cornerRadius(4)
+                                .frame(width: 160, height: 240)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: 360)
-                            .frame(width: 201)
-                            .cornerRadius(4)
-                            .overlay(
-                                Text("No Image")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                            )
                     }
-                    VStack(alignment: .leading, spacing: 20, content: {
-                        // Show Status
-                        Text("Status: \(show.status?.capitalized ?? "N/A")")
-                            .font(.headline)
-                            .foregroundColor(show.ended ?? false ? .red : .green)
-                        
+
+                    // Meta Info
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(show.title ?? show.name)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.blue, .purple],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+
+                        if let rating = show.voteAverage {
+                            HStack {
+                                SwiftUI.Image(systemName: "star.fill")
+                                    .foregroundColor(.yellow)
+                                Text(String(format: "%.1f", rating))
+                                    .fontWeight(.semibold)
+                            }
+                        }
+
+                        StatusBadge(status: show.status ?? "Unknown", ended: show.ended ?? false)
+
                         if show.monitored ?? false {
                             Text("Monitored")
                                 .font(.subheadline)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.blue.opacity(0.2))
                                 .foregroundColor(.blue)
-                        } else {
-                            Text("Not Monitored")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .clipShape(Capsule())
                         }
-                        
-                        // Network and Runtime
-                        if let network = show.network, let runtime = show.runtime {
-                            Text("\(network) • \(runtime) min per episode")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        } else if show.monitored == nil {
-                            Text("Add to Sonarr to view more metadata")
-                                .font(.caption2)
-                            // Add to Sonarr for Discover Shows
-                            Button("Add") {
-                                addShowToSonarr(show)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .multilineTextAlignment(.leading)
-                        }
-                        
-                        // Air Dates
-                        if let firstAired = show.firstAired, let nextAiring = show.nextAiring {
-                            VStack(alignment: .leading) {
-                                Text("First Aired: \(formatDate(firstAired))")
-                                Text("Next Airing: \(formatDate(nextAiring))")
+
+                        if let network = show.network {
+                            HStack {
+                                SwiftUI.Image(systemName: "tv")
+                                Text(network)
                             }
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         }
-                    })
+
+                        if let runtime = show.runtime {
+                            HStack {
+                                SwiftUI.Image(systemName: "clock")
+                                Text("\(runtime) min")
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+
+                // Air Dates
+                if let firstAired = show.firstAired {
+                    InfoSection(title: "Air Dates") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            DateRow(title: "First Aired", date: firstAired)
+                            if let nextAiring = show.nextAiring {
+                                DateRow(title: "Next Episode", date: nextAiring)
+                            }
+                        }
+                    }
                 }
 
                 // Overview
-                if let overview = show.overview ?? show.overview {
-                    Text("Overview")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    Text(overview)
-                        .font(.body)
-                        .foregroundColor(.gray)
+                if let overview = show.overview {
+                    InfoSection(title: "Overview") {
+                        Text(overview)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .lineSpacing(4)
+                    }
                 }
 
                 // Seasons
                 if let seasons = show.seasons {
-                    Text("Seasons")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    ForEach(seasons) { season in
-                        NavigationLink(destination: EpisodeListView(show: show, seasonNumber: season.seasonNumber)) {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Season \(season.seasonNumber)")
-                                    .font(.headline)
-                                if let stats = season.statistics {
-                                    Text("Episodes: \(stats.episodeFileCount)/\(stats.totalEpisodeCount)")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    Text("Percent Complete: \(String(format: "%.0f%%", stats.percentOfEpisodes ?? 0))")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                    InfoSection(title: "Seasons") {
+                        VStack(spacing: 16) {
+                            ForEach(seasons) { season in
+                                NavigationLink(destination: EpisodeListView(show: show, seasonNumber: season.seasonNumber)) {
+                                    SeasonCard(season: season, show: show)
                                 }
                             }
-                            .padding(.vertical, 10)
                         }
                     }
                 }
             }
-            .padding()
+            .padding(.vertical)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// Helper Views
+struct StatusBadge: View {
+    let status: String
+    let ended: Bool
+
+    var body: some View {
+        Text(status)
+            .font(.subheadline)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(ended ? Color.red.opacity(0.2) : Color.green.opacity(0.2))
+            .foregroundColor(ended ? .red : .green)
+            .clipShape(Capsule())
+    }
+}
+
+struct InfoSection<Content: View>: View {
+    let title: String
+    let content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.title2)
+                .fontWeight(.bold)
+            content
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct DateRow: View {
+    let title: String
+    let date: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(formatDate(date))
+                .fontWeight(.medium)
         }
     }
 
-    // Helper function to format ISO 8601 dates
-    func formatDate(_ dateString: String) -> String {
+    private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         if let date = formatter.date(from: dateString) {
             let displayFormatter = DateFormatter()
@@ -133,36 +183,105 @@ struct ShowDetailView: View {
         }
         return dateString
     }
+}
 
-    @State private var isAddingToSonarr: Bool = false
-    @State private var isAddedToSonarr: Bool = false
+struct SeasonCard: View {
+    let season: Season
+    let show: Show
+    @State private var isMonitored: Bool
+    @State private var isUpdating = false
+    @State private var lastUpdate = Date()
+    @EnvironmentObject var viewModel: MediaMachineViewModel
 
-    // Add Discover Show to Sonarr
-    private func addShowToSonarr(_ show: Show) {
-        // Fetch quality profiles and ask user to select quality and download option
-        MediaMachineViewModel.shared.fetchQualityProfiles { profiles in
-            guard let profiles = profiles else { return }
+    init(season: Season, show: Show) {
+        self.season = season
+        self.show = show
+        _isMonitored = State(initialValue: season.monitored)
+    }
 
-            let qualityPicker = QualityPicker(profiles: profiles) { selectedProfile, startDownload in
-                isAddingToSonarr = true // Disable the button while adding
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Season \(season.seasonNumber)")
+                    .font(.headline)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
 
-                MediaMachineViewModel.shared.addShow(show: show, qualityProfileId: selectedProfile.id, startDownload: startDownload) {
-                    DispatchQueue.main.async {
-                        isAddingToSonarr = false
-                        isAddedToSonarr = true // Update state to show success
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { isMonitored },
+                    set: { newValue in
+                        let now = Date()
+                        guard now.timeIntervalSince(lastUpdate) > 0.5 else { return }
+                        lastUpdate = now
+
+                        guard !isUpdating else { return }
+                        isUpdating = true
+                        isMonitored = newValue
+
+                        viewModel.updateSeasonMonitoring(
+                            showId: show.id,
+                            seasonNumber: season.seasonNumber,
+                            monitored: newValue
+                        ) { success in
+                            if !success {
+                                isMonitored = !newValue
+                            }
+                            isUpdating = false
+                        }
                     }
-                }
+                ))
+                .toggleStyle(SwitchToggleStyle(tint: .blue))
+                .disabled(isUpdating)
             }
 
-            DispatchQueue.main.async {
-                DispatchQueue.main.async {
-                    let hostingController = UIHostingController(rootView: qualityPicker)
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let window = windowScene.windows.first {
-                        window.rootViewController?.present(hostingController, animated: true)
-                    }
+            if let stats = season.statistics {
+                // Progress
+                HStack {
+                    ProgressView(
+                        value: Double(stats.episodeFileCount),
+                        total: Double(stats.totalEpisodeCount)
+                    )
+                    .tint(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    Text("\(stats.episodeFileCount)/\(stats.totalEpisodeCount)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
+
+                // Episode Info
+                HStack {
+                    SwiftUI.Image(systemName: "film")
+                    Text("\(stats.totalEpisodeCount) Episodes")
+                    Spacer()
+                    Text(formatSize(stats.sizeOnDisk))
+                }
+                .font(.subheadline)
+                .foregroundColor(.secondary)
             }
         }
+        .padding()
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .opacity(isUpdating ? 0.6 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isUpdating)
+    }
+
+    private func formatSize(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
     }
 }

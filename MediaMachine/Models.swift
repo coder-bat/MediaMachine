@@ -38,7 +38,7 @@ struct Show: Identifiable, Codable, ShowType {
     var monitored: Bool?
     let genres: [String]?
     let ratings: Ratings?
-    let seasons: [Season]?
+    var seasons: [Season]?
     let images: [Image]?
     var notificationsEnabled: Bool?
     let cleanTitle: String?
@@ -80,7 +80,7 @@ struct Show: Identifiable, Codable, ShowType {
         case voteAverage = "vote_average" //
         case tvdbId = "tvdb_id" // Map the JSON key to tvdbId //
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let idVal = try? container.decodeIfPresent(Int.self, forKey: .id) {
@@ -113,13 +113,13 @@ struct Show: Identifiable, Codable, ShowType {
         } else {
             posterPath = nil
         }
-        
+
         if let images = try container.decodeIfPresent([Image].self, forKey: .images) {
             posterUrl = images.first(where: { $0.coverType == "poster" })?.remoteUrl
         } else {
             posterUrl = nil
         }
-        
+
         // Extract voteAverage from ratings
         if let ratings = try container.decodeIfPresent([String: Double].self, forKey: .ratings) {
             voteAverage = ratings["value"]
@@ -128,17 +128,17 @@ struct Show: Identifiable, Codable, ShowType {
         }
         title = name
         tvdbId = try container.decodeIfPresent(Int.self, forKey: .id) ?? -1 // Use -1 as a fallback for missing ids
-        
+
         sortTitle = try container.decodeIfPresent(String.self, forKey: .sortTitle)
         status = try container.decodeIfPresent(String.self, forKey: .status)
-        
+
         ended = try container.decodeIfPresent(Bool.self, forKey: .ended)
         network = try container.decodeIfPresent(String.self, forKey: .network)
         airTime = try container.decodeIfPresent(String.self, forKey: .airTime)
         year = try container.decodeIfPresent(Int.self, forKey: .year)
         runtime = try container.decodeIfPresent(Int.self, forKey: .runtime)
         nextAiring = try container.decodeIfPresent(String.self, forKey: .nextAiring)
-        
+
         previousAiring = try container.decodeIfPresent(String.self, forKey: .previousAiring)
         monitored = try container.decodeIfPresent(Bool.self, forKey: .monitored)
         genres = try container.decodeIfPresent([String].self, forKey: .genres)
@@ -146,7 +146,7 @@ struct Show: Identifiable, Codable, ShowType {
         seasons = try container.decodeIfPresent([Season].self, forKey: .seasons)
         firstAired = try container.decodeIfPresent(String.self, forKey: .firstAired)
         images = try container.decodeIfPresent([Image].self, forKey: .images) ?? []
-        
+
         notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled)
         cleanTitle = try container.decodeIfPresent(String.self, forKey: .cleanTitle)
         path = try container.decodeIfPresent(String.self, forKey: .path)
@@ -288,7 +288,7 @@ struct Ratings: Codable {
 struct Season: Identifiable, Codable {
     var id: Int { seasonNumber } // Use `seasonNumber` as the unique ID
     let seasonNumber: Int
-    let monitored: Bool
+    var monitored: Bool
     let statistics: Statistics?
 
     enum CodingKeys: String, CodingKey {
@@ -313,15 +313,17 @@ struct Image: Codable {
     let remoteUrl: String
 }
 
-struct Episode: Identifiable, Codable {
+struct Episode: Identifiable, Codable, Hashable {
     let id: Int
     let title: String
     let seasonNumber: Int
     let episodeNumber: Int
     let airDate: String?
-    let monitored: Bool
+    var monitored: Bool
     let hasFile: Bool
-    var showTitle: String? // Add this property
+    var showTitle: String?
+    var overview: String?
+    var seriesId: Int
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -331,6 +333,16 @@ struct Episode: Identifiable, Codable {
         case airDate
         case monitored
         case hasFile
+        case overview
+        case seriesId
+    }
+
+    static func == (lhs: Episode, rhs: Episode) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 
